@@ -1,0 +1,48 @@
+project_name: dfc-syn_trees_dia_notrees
+restore_ckpt: "/home/emasquil/pretrained-models/MonSter/MonSter/mix_all.pth"
+logdir: './training_runs/dfc-syn_trees_dia_notrees'
+encoder: 'vitl'
+batch_size: 4
+train_datasets: ['dfc']
+lr: 5e-5
+wdecay: 1e-5
+total_step: 50000
+save_frequency: 2000
+val_frequency: 2000
+image_size: 512
+train_iters: 22
+valid_iters: 32
+val_dataset: 'dfc'
+corr_implementation: "reg"
+corr_levels: 2
+corr_radius: 4
+n_downsample: 2
+n_gru_layers: 3
+hidden_dims: [128, 128, 128]
+max_disp: 576
+num_gpu: 1
+seed: 0
+depth_anything_v2_path: "/home/emasquil/pretrained-models/depth-anything-v2/depth_anything_v2_vitl.pth"
+dfc:
+  root: "/home/emasquil/datasets/DFC2019/stereo_pairs"
+  train_aois_csv: "/home/emasquil/diachronic-stereo/splits/dfc_v0/v0/train_aois.csv"
+  val_aois_csv: "/home/emasquil/diachronic-stereo/splits/dfc_v0/v0/val_aois.csv"
+  test_aois_csv: "/home/emasquil/diachronic-stereo/splits/dfc_v0/v0/test_aois.csv"
+# Augmentation parameters (matches FlowAugmentor)
+augmentation:
+  crop_size: 512 # same as image_size
+  min_scale: -0.2
+  max_scale: 0.4
+  stretch_prob: 0.8
+  max_stretch: 0.2
+  do_flip: False
+  h_flip_prob: 0.5
+  v_flip_prob: 0.1
+  yjitter: False
+  saturation_range: [0.0, 1.4]
+  brightness: 0.4
+  contrast: 0.4
+  hue: 0.159  # ≈ 0.5 / pi
+  gamma_range: [1.0, 1.0, 1.0, 1.0]  # (gamma_min, gamma_max, gain_min, gain_max)
+  asymmetric_prob: 0.2
+  eraser_prob: 0.5

@@ -1,0 +1,52 @@
+name: diachronicstereo
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  - numpy
+  - scipy
+  - tqdm
+  - matplotlib
+  - scikit-image
+  - scikit-learn
+  - opencv
+  - numba
+  - pillow
+  - imageio
+  - jupyterlab
+  - joblib
+  - ninja
+  - nodejs
+  - pip:
+      - torch==2.4.1
+      - torchvision==0.19.1
+      - torchaudio==2.4.1
+      - timm==1.0.15
+      - mmcv==2.1.0 -f https://download.openmmlab.com/mmcv/dist/cu121/torch2.4/index.html
+      - accelerate==1.0.1
+      - xformers
+      - albumentations
+      - cmapy
+      - einops
+      - gdown
+      - omegaconf
+      - opt_einsum
+      - pyyaml
+      - ruamel.yaml
+      - tensorboard
+      - transformations
+      - trimesh
+      - huggingface-hub
+      - gradio==4.29.0
+      - gradio_imageslider
+      - --extra-index-url https://download.pytorch.org/whl/cu121
+      - iio
+      - black
+      - ipdb
+      - kornia
+      - open3d
+      - hydra-core

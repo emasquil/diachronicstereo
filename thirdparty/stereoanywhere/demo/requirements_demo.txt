@@ -1,0 +1,4 @@
+pycuda==2025.1
+tensorrt==10.8.0.43
+depthai==2.30.0.0
+flask
