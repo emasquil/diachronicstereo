@@ -11,22 +11,6 @@ See the @hydra.main decorator for the active config path/name and adjust dataset
 roots and training hyperparameters in the YAML files.
 """
 
-# Temporary sys.path hack to pull thirdparty MonSter + Depth-Anything code;
-# this should be cleaned up inside the thirdparty module itself.
-import sys
-from pathlib import Path
-
-root = Path(__file__).resolve().parent
-monster_root = root / "thirdparty" / "MonSter"
-depth_anything_root = monster_root / "Depth-Anything-V2-list3"
-
-for p in (monster_root, depth_anything_root):
-    ps = str(p)
-    if ps not in sys.path:
-        sys.path.insert(0, ps)
-# -----------------------------------------
-
-
 import os
 from datetime import datetime
 from pathlib import Path
@@ -49,8 +33,7 @@ from tqdm import tqdm
 
 from datasets.augmentations import StereoAugmentor
 from datasets.our_data import StereoDFC
-from thirdparty.MonSter.core.monster import Monster
-from thirdparty.MonSter.core.utils.utils import InputPadder
+import thirdparty
 
 
 def gray_2_colormap_np(img, cmap="rainbow", max=None):
@@ -156,8 +139,8 @@ def fetch_optimizer(args, model):
 
 @hydra.main(
     version_base=None,
-    config_path="training_config",
-    config_name="train_dfc_non_diachronic",
+    config_path="training_configs",
+    config_name="train_dfc",
 )
 def main(cfg):
     # Set up run directory
@@ -246,27 +229,21 @@ def main(cfg):
     )
 
     # Model
-    model = Monster(cfg)
-    # from thirdparty import build_monster
-    # model = build_monster(
-    #     monster_ckpt=cfg.restore_ckpt if cfg.restore_ckpt else "/path/to/empty_init.pth",
-    #     depth_anything_v2_path=cfg.depth_anything_v2_path,
-    #     device="cuda:0",
-    #     args=cfg,
-    #     eval_only=False,  # we're training
-    # )
-
     if cfg.restore_ckpt is not None:
         assert cfg.restore_ckpt.endswith(".pth")
-        print(f"Loading checkpoint from {cfg.restore_ckpt}")
         assert os.path.exists(cfg.restore_ckpt)
-        checkpoint = torch.load(cfg.restore_ckpt, map_location="cpu")
-        ckpt = checkpoint.get("state_dict", checkpoint)
-        model.load_state_dict(
-            {k.replace("module.", ""): v for k, v in ckpt.items()}, strict=True
-        )
+        print(f"Loading checkpoint from {cfg.restore_ckpt}")
+
+    model = thirdparty.build_monster(
+        monster_ckpt=cfg.restore_ckpt,
+        depth_anything_v2_path=cfg.depth_anything_v2_path,
+        device="cpu",
+        args=cfg,
+        eval_only=False,
+    )
+
+    if cfg.restore_ckpt is not None:
         print(f"Loaded checkpoint from {cfg.restore_ckpt} successfully")
-    del ckpt, checkpoint
 
     optimizer, lr_scheduler = fetch_optimizer(cfg, model)
     train_loader, model, optimizer, lr_scheduler, val_loader = accelerator.prepare(
@@ -397,7 +374,7 @@ def main(cfg):
                     disp_gt = val_data["disparity"]
                     valid = val_data.get("valid", (disp_gt > 0).float())
 
-                    padder = InputPadder(left.shape, divis_by=32)
+                    padder = thirdparty.MonsterInputPadder(left.shape, divis_by=32)
                     left, right = padder.pad(left, right)
                     with torch.no_grad():
                         disp_pred = model(

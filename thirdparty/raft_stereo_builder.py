@@ -1,36 +1,13 @@
 # thirdparty/raft_stereo_builder.py
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Union
 
 import torch
 
-
-def _add_raft_repo_root_to_syspath(thirdparty_dir: Path) -> Path:
-    """
-    Ensure RAFT-Stereo repo root (NOT 'core/') is on sys.path so that
-    'import core.raft_stereo' works.
-    Expected layout:
-      thirdparty/
-        RAFT-Stereo/
-          core/
-            raft_stereo.py
-            ...
-    """
-    repo_root = thirdparty_dir / "RAFT-Stereo"
-    core_dir = repo_root / "core"
-    if not core_dir.exists():
-        raise FileNotFoundError(
-            f"Could not find RAFT-Stereo at {repo_root}. "
-            f"Expected {core_dir} to exist."
-        )
-    # add repo root (not core/)
-    if str(repo_root) not in sys.path:
-        sys.path.insert(0, str(repo_root))
-    return repo_root
+from ._paths import ensure_raft_paths
 
 
 def _default_args() -> SimpleNamespace:
@@ -84,8 +61,7 @@ def build_raft_stereo(
     Build + load RAFT-Stereo and return a wrapped module with call:
         disp = model(left, right, iters=32, test_mode=True)
     """
-    thirdparty_dir = Path(__file__).resolve().parent
-    _add_raft_repo_root_to_syspath(thirdparty_dir)
+    ensure_raft_paths()
 
     from core.raft_stereo import RAFTStereo  # import after sys.path injection
 

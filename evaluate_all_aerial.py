@@ -128,7 +128,9 @@ class StereoAnywherePredictor:
     def __init__(self, ckpt: str, depth_anything_v2_path: Optional[str], device: str):
         self.device = device
         self.stereo_model, self.depth_model = thirdparty.build_stereoanywhere(
-            ckpt, depth_anything_v2_path, device
+            stereo_ckpt=ckpt,
+            depth_anything_v2_path=depth_anything_v2_path,
+            device=device,
         )
         self.stereo_model.eval()
         self.depth_model.eval()
@@ -179,7 +181,10 @@ class FoundationStereoPredictor:
 
     def __init__(self, ckpt: str, device: str):
         self.device = device
-        self.stereo_model = thirdparty.build_foundation_stereo(ckpt, device)
+        self.stereo_model = thirdparty.build_foundation_stereo(
+            foundation_ckpt=ckpt,
+            device=device,
+        )
         self.stereo_model.eval()
 
     @torch.no_grad()

@@ -17,21 +17,6 @@ Summary CSV columns (created/appended at --output-dir/summary.csv):
 
 from __future__ import annotations
 
-# --- MUST be the very first lines in train_monster.py ---
-import sys
-from pathlib import Path
-
-root = Path(__file__).resolve().parent
-monster_root = root / "thirdparty" / "MonSter"
-depth_anything_root = monster_root / "Depth-Anything-V2-list3"
-
-for p in (monster_root, depth_anything_root):
-    ps = str(p)
-    if ps not in sys.path:
-        sys.path.insert(0, ps)
-# -----------------------------------------
-
-
 import argparse
 import csv
 import os
@@ -50,8 +35,6 @@ from tqdm import tqdm
 
 from utils import misc
 import thirdparty
-
-from thirdparty.FoundationStereo.fs_core.utils.utils import InputPadder as FsInputPadder
 
 # --------------------------- Small I/O helpers ---------------------------
 
@@ -218,6 +201,7 @@ class MonSterPredictor:
             depth_anything_v2_path=depth_anything_v2_path,
             device=device,
         )
+        self.model.eval()
 
     @torch.no_grad()
     def predict_batch(self, batch_L: torch.Tensor, batch_R: torch.Tensor) -> np.ndarray:
@@ -239,7 +223,9 @@ class StereoAnywherePredictor:
     def __init__(self, ckpt: str, depth_anything_v2_path: Optional[str], device: str):
         self.device = device
         self.stereo_model, self.depth_model = thirdparty.build_stereoanywhere(
-            ckpt, depth_anything_v2_path, device
+            stereo_ckpt=ckpt,
+            depth_anything_v2_path=depth_anything_v2_path,
+            device=device,
         )
         self.stereo_model.eval()
         self.depth_model.eval()
@@ -298,7 +284,10 @@ class FoundationStereoPredictor:
 
     def __init__(self, ckpt: str, device: str):
         self.device = device
-        self.stereo_model = thirdparty.build_foundation_stereo(ckpt, device)
+        self.stereo_model = thirdparty.build_foundation_stereo(
+            foundation_ckpt=ckpt,
+            device=device,
+        )
         self.stereo_model.eval()
 
     @torch.no_grad()
@@ -310,8 +299,7 @@ class FoundationStereoPredictor:
         # R = batch_R.to(self.device)
 
         # Pad to multiples of 32 (non-square allowed)
-        # padder = thirdparty.FsInputPadder(L.shape, divis_by=32, force_square=False)
-        padder = FsInputPadder(L.shape, divis_by=32, force_square=False)
+        padder = thirdparty.FsInputPadder(L.shape, divis_by=32, force_square=False)
         Lp, Rp = padder.pad(L, R)
 
         # Hierarchical inference (autocast on CUDA only)

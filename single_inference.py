@@ -14,7 +14,6 @@ MAE reports against the GT DSM.
 
 import argparse
 import os
-import sys
 
 import iio
 import numpy as np
@@ -188,17 +187,21 @@ def main():
             depth_anything_v2_path=args.depth_anything_v2_path,
             device=args.device,
         )
+        stereo_model.eval()
     elif args.model == "stereoanywhere":
         stereo_model, depth_model = thirdparty.build_stereoanywhere(
             stereo_ckpt=args.stereo_ckpt,
             depth_anything_v2_path=args.depth_anything_v2_path,
             device=args.device,
         )
+        stereo_model.eval()
+        depth_model.eval()
     elif args.model == "foundationstereo":
         stereo_model = thirdparty.build_foundation_stereo(
             foundation_ckpt=args.stereo_ckpt,
             device=args.device,
         )
+        stereo_model.eval()
 
     # Get as a sub output dir the name of the rectified left image without extension
     subdir = os.path.splitext(os.path.basename(args.left_image))[0]

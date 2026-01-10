@@ -1,6 +1,6 @@
-project_name: dfc-syn_trees_dia_notrees
+project_name: dfc-syn_trees_dia_trees
 restore_ckpt: "/home/emasquil/pretrained-models/MonSter/MonSter/mix_all.pth"
-logdir: './training_runs/dfc-syn_trees_dia_notrees'
+logdir: './training_runs/dfc-syn_trees_dia_trees'
 encoder: 'vitl'
 batch_size: 4
 train_datasets: ['dfc']

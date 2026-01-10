@@ -2,8 +2,6 @@
 # thirdparty/__init__.py
 from __future__ import annotations
 
-import sys
-from contextlib import contextmanager
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Optional, Union
@@ -11,28 +9,9 @@ from typing import Optional, Union
 import torch
 from omegaconf import OmegaConf
 
-_THIS_DIR = Path(__file__).resolve().parent
+from ._paths import ensure_monster_paths
 
 # ---------- small helpers ----------
-
-
-@contextmanager
-def _push_sys_path(p: Path):
-    """Temporarily prepend a path to sys.path."""
-    s = str(p)
-    inserted = False
-    if s not in sys.path:
-        sys.path.insert(0, s)
-        inserted = True
-    try:
-        yield
-    finally:
-        if inserted:
-            # remove first occurrence only
-            try:
-                sys.path.remove(s)
-            except ValueError:
-                pass
 
 
 def _device_from_maybe_str(d: Optional[Union[str, torch.device]]) -> torch.device:
@@ -82,31 +61,35 @@ def build_monster(
     eval_only: bool = True,
 ) -> torch.nn.Module:
     """
-    Build MonSter. Lazily exposes MonSter's repo 'core/' by temporarily
-    injecting it into sys.path so 'from core.*' inside that repo works.
+    Build MonSter with MonSter + Depth-Anything paths managed in one place.
     """
     device = _device_from_maybe_str(device)
-    args.depth_anything_v2_path = depth_anything_v2_path
+    if depth_anything_v2_path is not None:
+        try:
+            args.depth_anything_v2_path = depth_anything_v2_path
+        except Exception:
+            if getattr(args, "depth_anything_v2_path", None) != depth_anything_v2_path:
+                raise
+    ensure_monster_paths()
 
-    monster_core = _THIS_DIR / "MonSter" / "core"
-    if not monster_core.exists():
-        raise FileNotFoundError(f"MonSter core not found at {monster_core}")
+    from core.monster import Monster  # MonSter uses top-level "core.*" imports
 
-    with _push_sys_path(monster_core):
-        from monster import (
-            Monster,
-        )  # MonSter repo has 'core/monster.py' with 'from core.*' inside
-
-        model = Monster(args)
+    model = Monster(args)
 
     if device.type == "cuda" and torch.cuda.device_count() > 1 and device.index is None:
         print(f"✅ Using DataParallel across {torch.cuda.device_count()} GPUs.")
         model = torch.nn.DataParallel(model)
 
     model.to(device)
-    state = torch.load(monster_ckpt, map_location=device)
-    state = state["state_dict"] if "state_dict" in state else state
-    model.load_state_dict(state, strict=True)
+    if monster_ckpt:
+        state = torch.load(monster_ckpt, map_location=device)
+        state = state["state_dict"] if "state_dict" in state else state
+        if isinstance(model, torch.nn.DataParallel):
+            if not any(k.startswith("module.") for k in state.keys()):
+                state = {f"module.{k}": v for k, v in state.items()}
+        else:
+            state = {k.replace("module.", ""): v for k, v in state.items()}
+        model.load_state_dict(state, strict=True)
     if eval_only:
         model.eval()
     return model
@@ -167,9 +150,6 @@ def build_foundation_stereo(
     device = _device_from_maybe_str(device)
 
     from .FoundationStereo.fs_core.foundation_stereo import FoundationStereo
-    from .FoundationStereo.fs_core.utils.utils import (
-        InputPadder as FsInputPadder,
-    )  # noqa: F401
 
     ckpt_dir = Path(foundation_ckpt).parent
     cfg = OmegaConf.load(ckpt_dir / "cfg.yaml")
@@ -197,3 +177,18 @@ def build_raft_stereo(
     from .raft_stereo_builder import build_raft_stereo as _builder
 
     return _builder(ckpt=ckpt, device=device, args=args)
+
+
+def __getattr__(name: str):
+    if name == "MonsterInputPadder":
+        ensure_monster_paths()
+        from core.utils.utils import InputPadder as MonsterInputPadder
+
+        globals()["MonsterInputPadder"] = MonsterInputPadder
+        return MonsterInputPadder
+    if name == "FsInputPadder":
+        from .FoundationStereo.fs_core.utils.utils import InputPadder as FsInputPadder
+
+        globals()["FsInputPadder"] = FsInputPadder
+        return FsInputPadder
+    raise AttributeError(f"module {__name__} has no attribute {name}")
